@@ -1,0 +1,38 @@
+# SystemD Service File for MySQL to SmartSuite Sync
+# Copy this to /etc/systemd/system/mysql-smartsuite-sync.service
+# Then run: systemctl enable mysql-smartsuite-sync && systemctl start mysql-smartsuite-sync
+
+[Unit]
+Description=MySQL to SmartSuite Sync Scheduler
+After=network.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/mysql-smartsuite-sync
+ExecStart=/usr/bin/python3 main.py schedule --run-immediately
+
+# Restart configuration
+Restart=always
+RestartSec=10
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/mysql-smartsuite-sync/.env
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/mysql-smartsuite-sync/logs /opt/mysql-smartsuite-sync/sync_state.db
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mysql-smartsuite-sync
+
+[Install]
+WantedBy=multi-user.target

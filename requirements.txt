@@ -1,0 +1,14 @@
+# Core dependencies
+python-dotenv==1.0.0
+pyyaml==6.0.1
+requests==2.31.0
+
+# Database drivers
+pymysql==1.1.0
+cryptography==41.0.7
+
+# Scheduling
+APScheduler==3.10.4
+
+# Utilities
+python-dateutil==2.8.2

@@ -1,0 +1,32 @@
+# Production Docker Compose configuration
+# Usage: docker-compose -f deployment/docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  sync:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: mysql_smartsuite_sync
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    volumes:
+      - ../config:/app/config:ro
+      - ../logs:/app/logs
+      - sync_state:/app
+    networks:
+      - sync_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  sync_state:
+
+networks:
+  sync_network:
+    driver: bridge

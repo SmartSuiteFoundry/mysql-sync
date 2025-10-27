@@ -1,0 +1,175 @@
+# Sync Mapping Configuration
+# This file defines how MySQL data maps to SmartSuite tables and fields
+
+syncs:
+  # First sync: Customers from MySQL to SmartSuite
+  - name: "customers_sync"
+    enabled: true
+    description: "Sync customer data from MySQL to SmartSuite"
+
+    # Source MySQL configuration
+    source:
+      query: |
+        SELECT
+          id,
+          customer_name,
+          email,
+          phone,
+          company,
+          status,
+          credit_limit,
+          created_at,
+          updated_at
+        FROM customers
+        WHERE updated_at >= :last_sync_time OR :last_sync_time IS NULL
+        ORDER BY updated_at ASC
+
+      # Primary key used for idempotency
+      primary_key: "id"
+
+      # Timestamp field to track incremental syncs
+      updated_at_field: "updated_at"
+
+    # Destination SmartSuite configuration
+    destination:
+      table_id: "your_table_id_here"
+
+      # Field mappings: mysql_column -> smartsuite_field_slug
+      field_mappings:
+        id: "customer_id"
+        customer_name: "title"  # SmartSuite title field
+        email: "email_address"
+        phone: "phone_number"
+        company: "company_name"
+        status: "customer_status"
+        credit_limit: "credit_limit"
+        created_at: "created_date"
+        updated_at: "last_updated"
+
+      # Field for storing MySQL primary key (for idempotency)
+      external_id_field: "customer_id"
+
+      # Field type definitions (NEW FORMAT - recommended)
+      # Specify SmartSuite field types and their options
+      field_types:
+        id:
+          type: "number"  # Convert to SmartSuite number field (string format)
+        credit_limit:
+          type: "currency"  # Currency field (string format)
+        status:
+          type: "singleselect"  # Single select/dropdown field
+          value_map:  # Map MySQL values to SmartSuite choice IDs or values
+            "active": "Active"
+            "inactive": "Inactive"
+            "pending": "Pending"
+        created_at:
+          type: "date"  # Date field with object format
+          include_time: true  # Include time in the date
+        updated_at:
+          type: "date"
+          include_time: true
+        customer_name:
+          type: "text"  # Text field (this is auto-detected, so optional)
+        email:
+          type: "emailfield"  # Email field (array format)
+        phone:
+          type: "phonefield"  # Phone field (array of phone objects)
+          default_country: "US"  # Default country code
+          default_type: 2  # 1=office, 2=mobile, 4=home, 5=fax, 8=other
+
+      # LEGACY: Old transformation format (still supported for backward compatibility)
+      # transformations:
+      #   credit_limit:
+      #     type: "number"
+      #     format: "float"
+      #   status:
+      #     type: "choice"
+      #     value_map:
+      #       "active": "Active"
+      #       "inactive": "Inactive"
+      #       "pending": "Pending"
+
+  # Second sync: Orders from MySQL to SmartSuite
+  - name: "orders_sync"
+    enabled: true
+    description: "Sync order data from MySQL to SmartSuite"
+
+    source:
+      query: |
+        SELECT
+          o.id,
+          o.customer_id,
+          o.order_number,
+          o.order_date,
+          o.total_amount,
+          o.status,
+          o.notes,
+          o.created_at,
+          o.updated_at,
+          c.customer_name
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        WHERE o.updated_at >= :last_sync_time OR :last_sync_time IS NULL
+        ORDER BY o.updated_at ASC
+
+      primary_key: "id"
+      updated_at_field: "updated_at"
+
+    destination:
+      table_id: "your_orders_table_id_here"
+
+      field_mappings:
+        id: "order_id"
+        order_number: "title"  # SmartSuite title field
+        customer_name: "customer"
+        order_date: "order_date"
+        total_amount: "total"
+        status: "order_status"
+        notes: "notes"
+        created_at: "created_date"
+        updated_at: "last_updated"
+
+      external_id_field: "order_id"
+
+      # Field type definitions
+      field_types:
+        id:
+          type: "number"
+        total_amount:
+          type: "currency"  # Currency field for monetary values
+        order_date:
+          type: "date"
+          include_time: false  # Date only, no time component
+        status:
+          type: "singleselect"
+          value_map:
+            "pending": "Pending"
+            "processing": "Processing"
+            "shipped": "Shipped"
+            "delivered": "Delivered"
+            "cancelled": "Cancelled"
+        created_at:
+          type: "date"
+          include_time: true
+        updated_at:
+          type: "date"
+          include_time: true
+        notes:
+          type: "textarea"  # Long text field
+
+      # LEGACY format (commented out - use field_types instead)
+      # transformations:
+      #   total_amount:
+      #     type: "number"
+      #     format: "float"
+      #   order_date:
+      #     type: "date"
+      #     format: "%Y-%m-%d"
+      #   status:
+      #     type: "choice"
+      #     value_map:
+      #       "pending": "Pending"
+      #       "processing": "Processing"
+      #       "shipped": "Shipped"
+      #       "delivered": "Delivered"
+      #       "cancelled": "Cancelled"
